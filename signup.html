@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - OG Bike Rentals</title>
+  <link rel="stylesheet" href="/css/global.css">
+</head>
+
+<body>
+
+  <!-- Sticky Navbar -->
+  <nav>
+    <a href="/" class="logo">🏍 OGBikerentals</a>
+    <ul class="nav-links">
+      <li><a href="/">Back to Home</a></li>
+    </ul>
+  </nav>
+
+  <!-- Signup Main Wrapper -->
+  <div class="auth-wrapper">
+    <div class="auth-blur-glow"></div>
+    <div class="auth-card">
+      <div class="logo" style="justify-content: center; margin-bottom: 10px;">🏍</div>
+      <h2>Create Account</h2>
+      <p class="auth-subtitle">Register to unlock easy booking and track your trips</p>
+
+      <form id="signup-form">
+        <div class="form-group">
+          <label for="fullname">Full Name</label>
+          <input type="text" id="fullname" class="form-input" placeholder="John Doe" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" class="form-input" placeholder="name@domain.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="mobile">Mobile Number</label>
+          <input type="tel" id="mobile" class="form-input" placeholder="+91 9876543210" required autocomplete="tel">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Min 6 characters" required
+            autocomplete="new-password">
+        </div>
+
+        <div class="form-group">
+          <label for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" class="form-input" placeholder="••••••••" required
+            autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-btn">Register</button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="/login">Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    // Redirect if already logged in
+    document.addEventListener('DOMContentLoaded', async () => {
+      const authState = await checkAuthSession();
+      if (authState.authenticated) {
+        window.location.href = '/dashboard';
+      }
+    });
+
+    // Form Submission Handling
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('fullname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const mobile = document.getElementById('mobile').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      // Basic frontend validation checks
+      if (!mobile || mobile.length < 10) {
+        showNotification('Please enter a valid mobile number.', 'error');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showNotification('Passwords do not match.', 'error');
+        return;
+      }
+
+      if (password.length < 6) {
+        showNotification('Password must be at least 6 characters.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, email, mobile, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showNotification(data.message || 'Signup successful! Redirecting to login...', 'success');
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1500);
+        } else {
+          showNotification(data.message || 'Registration failed. Please check your details.', 'error');
+        }
+      } catch (error) {
+        console.error('Signup submit error:', error);
+        showNotification('An error occurred. Please try again later.', 'error');
+      }
+    });
+  </script>
+</body>
+
+</html>

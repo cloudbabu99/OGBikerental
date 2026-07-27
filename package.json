@@ -1,0 +1,25 @@
+{
+  "name": "og-bike-rentals",
+  "version": "1.0.0",
+  "description": "OG Bike Rentals - Premium Motorcycle & Scooter Rentals Web Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "bike-rentals",
+    "motorcycle",
+    "express",
+    "wsl"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "qrcode": "^1.5.3",
+    "sqlite3": "^5.1.7"
+  }
+}

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard - OG Bike Rentals</title>
+  <link rel="stylesheet" href="/css/global.css">
+</head>
+
+<body>
+
+  <!-- Sticky Glass Navbar -->
+  <nav>
+    <a href="/" class="logo">🏍 OGBikeRentals</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="#booking-section">Book Ride</a></li>
+      <li><a href="#history-section">My Bookings</a></li>
+    </ul>
+  </nav>
+
+  <!-- Dashboard Container -->
+  <main class="dashboard-layout">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+
+      <!-- Welcome Banner -->
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h1 id="welcome-message">Welcome to your Dashboard</h1>
+          <p id="user-email-display">Loading profile...</p>
+        </div>
+        <div>
+          <button id="dashboard-logout-btn" class="nav-btn-secondary">Sign Out</button>
+        </div>
+      </div>
+
+      <!-- Main Columns -->
+      <div class="dashboard-grid">
+
+        <!-- Left: Booking Form -->
+        <div id="booking-section">
+          <div class="glass-card" style="padding: 30px;">
+            <h3 style="font-size: 1.4rem; margin-bottom: 20px; color: var(--primary);">Book a New Ride</h3>
+
+            <form id="booking-form">
+              <div class="form-group">
+                <label for="bike-type">Select Motorcycle / Scooter</label>
+                <div class="select-wrapper">
+                  <select id="bike-type" class="form-input" required>
+                    <option value="" disabled selected>-- Choose a vehicle --</option>
+                    <option value="Scooter">Scooter (₹499/day)</option>
+                    <option value="Sports Bike">Sports Bike (₹1,499/day)</option>
+                    <option value="Adventure Bike">Adventure Bike (₹2,499/day)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="rental-days">Rental Duration (Days)</label>
+                <input type="number" id="rental-days" class="form-input" min="1" max="90" value="1" required>
+              </div>
+
+              <!-- Price Preview Box -->
+              <div class="price-preview-box">
+                <span class="preview-label">Estimated Total Price:</span>
+                <span id="price-preview" class="preview-value">₹0</span>
+              </div>
+
+              <button type="submit" class="btn btn-primary auth-btn" style="margin-top: 24px;">Confirm Booking</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right: Booking History -->
+        <div id="history-section">
+          <div class="glass-card" style="padding: 30px; height: 100%; display: flex; flex-direction: column;">
+            <h3 style="font-size: 1.4rem; margin-bottom: 20px; color: var(--primary);">Your Booking History</h3>
+
+            <div id="bookings-loading" style="text-align: center; padding: 40px 0; color: var(--text-muted);">
+              Loading bookings...
+            </div>
+
+            <div id="no-bookings-view"
+              style="display: none; text-align: center; padding: 40px 20px; color: var(--text-muted);">
+              <span style="font-size: 3rem; display: block; margin-bottom: 15px;">🏍</span>
+              <p>You have no booking records yet.</p>
+              <p style="font-size: 0.85rem; margin-top: 5px;">Select a vehicle on the left to start your first ride!</p>
+            </div>
+
+            <div id="table-view" style="display: none; flex-grow: 1;">
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Booking ID</th>
+                      <th>Vehicle</th>
+                      <th>Days</th>
+                      <th>Total Cost</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Payment</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bookings-table-body">
+                    <!-- Loaded dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- UPI Payment QR Code Modal -->
+  <div id="payment-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closePaymentModal()">&times;</button>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <span style="font-size: 2.5rem;">📲</span>
+        <h2 style="font-size: 1.5rem; margin-top: 6px;">UPI QR Code Payment</h2>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">Scan using GPay, PhonePe, Paytm or BHIM UPI</p>
+      </div>
+
+      <div class="qr-container">
+        <img id="modal-qr-img" src="" alt="UPI Payment QR Code">
+      </div>
+
+      <div class="payment-details-box">
+        <div class="detail-row">
+          <span>Booking Ref:</span>
+          <strong id="modal-booking-id">#0</strong>
+        </div>
+        <div class="detail-row">
+          <span>Total Amount:</span>
+          <strong id="modal-amount" style="color: var(--primary); font-size: 1.2rem;">₹0</strong>
+        </div>
+        <div class="detail-row">
+          <span>UPI VPA:</span>
+          <strong>ogbikerentals@upi</strong>
+        </div>
+      </div>
+
+      <!-- Notifications Dispatch Status Banner -->
+      <div class="notification-dispatch-pill">
+        <div>✉️ <strong>Email Sent:</strong> <span id="modal-email-target">...</span></div>
+        <div style="margin-top: 4px;">💬 <strong>SMS Sent:</strong> <span id="modal-sms-target">...</span></div>
+      </div>
+
+      <div class="modal-actions">
+        <button onclick="copyUpiLink()" class="btn btn-secondary"
+          style="flex: 1; padding: 10px 14px; font-size: 0.88rem;">Copy UPI Link</button>
+        <button onclick="confirmPaymentAction()" class="btn btn-primary"
+          style="flex: 1; padding: 10px 14px; font-size: 0.88rem;">Complete Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer style="margin-top: 80px;">
+    <p>© 2026 OG Bike Rentals. All Rights Reserved.</p>
+  </footer>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const rates = {
+      'Scooter': 499,
+      'Sports Bike': 1499,
+      'Adventure Bike': 2499
+    };
+
+    // Protect Dashboard: redirect if not logged in
+    document.addEventListener('DOMContentLoaded', async () => {
+      const authState = await checkAuthSession();
+      if (!authState.authenticated) {
+        window.location.href = '/login';
+        return;
+      }
+
+      // Update user details
+      document.getElementById('welcome-message').innerText = `Welcome, ${authState.user.name}!`;
+      document.getElementById('user-email-display').innerText = authState.user.email;
+
+      // Handle custom logout button
+      document.getElementById('dashboard-logout-btn').addEventListener('click', handleLogout);
+
+      // Intercept Home / Logo links to logout & return to home page
+      document.querySelectorAll('a[href="/"]').forEach(link => {
+        link.addEventListener('click', async (e) => {
+          e.preventDefault();
+          try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+          } catch (err) {
+            console.error('Logout error:', err);
+          }
+          window.location.href = '/';
+        });
+      });
+
+      // Load user booking history
+      loadBookingHistory();
+
+      // Listen for form price calculator updates
+      document.getElementById('bike-type').addEventListener('change', calculatePricePreview);
+      document.getElementById('rental-days').addEventListener('input', calculatePricePreview);
+    });
+
+    // Handle browser back button or page navigation away from dashboard
+    window.addEventListener('popstate', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (err) { }
+      window.location.href = '/';
+    });
+
+    window.addEventListener('pagehide', () => {
+      navigator.sendBeacon('/api/auth/logout');
+    });
+
+    // Price Preview Calculator
+    function calculatePricePreview() {
+      const bikeType = document.getElementById('bike-type').value;
+      const days = parseInt(document.getElementById('rental-days').value, 10);
+
+      if (!bikeType || isNaN(days) || days <= 0) {
+        document.getElementById('price-preview').innerText = '₹0';
+        return;
+      }
+
+      const rate = rates[bikeType] || 0;
+      const total = rate * days;
+      document.getElementById('price-preview').innerText = `₹${total.toLocaleString('en-IN')}`;
+    }
+
+    // Load Booking History
+    async function loadBookingHistory() {
+      const loadingEl = document.getElementById('bookings-loading');
+      const emptyEl = document.getElementById('no-bookings-view');
+      const tableEl = document.getElementById('table-view');
+      const tbody = document.getElementById('bookings-table-body');
+
+      try {
+        const response = await fetch('/api/bookings');
+        const data = await response.json();
+
+        loadingEl.style.display = 'none';
+
+        if (response.ok && data.success && data.bookings && data.bookings.length > 0) {
+          tbody.innerHTML = '';
+
+          data.bookings.forEach(booking => {
+            const row = document.createElement('tr');
+
+            const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-IN', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+
+            const isPaid = booking.payment_status === 'Paid';
+            const actionBtn = isPaid
+              ? `<span class="status-badge paid-badge">✓ Paid</span>`
+              : `<button onclick="openPaymentModal(${booking.id})" class="nav-btn pay-btn">Pay Now (UPI QR)</button>`;
+
+            row.innerHTML = `
+              <td><strong>#${booking.id}</strong></td>
+              <td>${booking.bike_type}</td>
+              <td>${booking.rental_days} days</td>
+              <td><span style="color: var(--primary); font-weight: 700;">₹${parseInt(booking.total_price).toLocaleString('en-IN')}</span></td>
+              <td style="color: var(--text-muted); font-size: 0.85rem;">${bookingDate}</td>
+              <td><span class="status-badge confirmed">${booking.status}</span></td>
+              <td>${actionBtn}</td>
+            `;
+            tbody.appendChild(row);
+          });
+
+          emptyEl.style.display = 'none';
+          tableEl.style.display = 'block';
+        } else {
+          tableEl.style.display = 'none';
+          emptyEl.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error loading bookings:', error);
+        loadingEl.innerText = 'Failed to load booking history.';
+      }
+    }
+
+    // Payment Modal Functions
+    let currentPaymentBookingId = null;
+    let currentUpiUri = '';
+
+    async function openPaymentModal(bookingId) {
+      currentPaymentBookingId = bookingId;
+      try {
+        const response = await fetch(`/api/bookings/${bookingId}/pay`, { method: 'POST' });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          document.getElementById('modal-qr-img').src = data.qrCodeUrl;
+          document.getElementById('modal-booking-id').innerText = `#${data.booking.id}`;
+          document.getElementById('modal-amount').innerText = `₹${parseInt(data.booking.total_price).toLocaleString('en-IN')}`;
+          document.getElementById('modal-email-target').innerText = data.emailSentTo;
+          document.getElementById('modal-sms-target').innerText = data.smsSentTo;
+          currentUpiUri = data.upiString;
+
+          showNotification(`Payment link sent to ${data.emailSentTo} & SMS to ${data.smsSentTo}!`, 'success');
+          document.getElementById('payment-modal').style.display = 'flex';
+        } else {
+          showNotification(data.message || 'Failed to generate payment QR code.', 'error');
+        }
+      } catch (err) {
+        console.error('Error opening payment modal:', err);
+        showNotification('Error initiating payment process.', 'error');
+      }
+    }
+
+    function closePaymentModal() {
+      document.getElementById('payment-modal').style.display = 'none';
+    }
+
+    function copyUpiLink() {
+      if (currentUpiUri) {
+        navigator.clipboard.writeText(currentUpiUri);
+        showNotification('UPI Payment Link copied to clipboard!', 'info');
+      }
+    }
+
+    async function confirmPaymentAction() {
+      if (!currentPaymentBookingId) return;
+
+      try {
+        const response = await fetch(`/api/bookings/${currentPaymentBookingId}/confirm-payment`, { method: 'POST' });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showNotification('Payment successfully completed and verified!', 'success');
+          closePaymentModal();
+          loadBookingHistory();
+        } else {
+          showNotification(data.message || 'Payment confirmation failed.', 'error');
+        }
+      } catch (err) {
+        console.error('Error confirming payment:', err);
+        showNotification('Error processing payment confirmation.', 'error');
+      }
+    }
+
+    // Submit Booking Form
+    document.getElementById('booking-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const bikeType = document.getElementById('bike-type').value;
+      const rentalDays = document.getElementById('rental-days').value;
+
+      if (!bikeType || !rentalDays) {
+        showNotification('Please select a bike and duration.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ bikeType, rentalDays })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showNotification(data.message || 'Ride booked successfully!', 'success');
+
+          // Reset form
+          document.getElementById('booking-form').reset();
+          document.getElementById('price-preview').innerText = '₹0';
+
+          // Reload history
+          loadBookingHistory();
+        } else {
+          showNotification(data.message || 'Failed to submit booking. Check inputs.', 'error');
+        }
+      } catch (error) {
+        console.error('Submit booking error:', error);
+        showNotification('An error occurred. Please try again.', 'error');
+      }
+    });
+  </script>
+</body>
+
+</html>

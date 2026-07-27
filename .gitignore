@@ -1,0 +1,6 @@
+node_modules/
+database.sqlite
+*.log
+.DS_Store
+*:Zone.Identifier
+test_*.sh
