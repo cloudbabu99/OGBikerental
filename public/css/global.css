@@ -231,8 +231,8 @@ nav {
   padding: 80px 20px;
   text-align: center;
   background: 
-    radial-gradient(circle at 50% 30%, rgba(255, 87, 34, 0.15) 0%, transparent 60%),
-    radial-gradient(circle at 80% 80%, rgba(0, 242, 254, 0.1) 0%, transparent 50%);
+    linear-gradient(180deg, rgba(9, 12, 21, 0.75) 0%, rgba(9, 12, 21, 0.88) 100%),
+    url('https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
 }
 
 .hero-content {
