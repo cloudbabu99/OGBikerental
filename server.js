@@ -67,6 +67,7 @@ app.use(session({
 // Static files
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
+app.use('/videos', express.static(path.join(__dirname, 'videos')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
