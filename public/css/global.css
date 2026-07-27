@@ -226,43 +226,46 @@ nav {
   position: relative;
   min-height: 85vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-  text-align: center;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 80px 60px 100px 60px;
+  text-align: left;
   background: 
-    linear-gradient(180deg, rgba(9, 12, 21, 0.75) 0%, rgba(9, 12, 21, 0.88) 100%),
+    linear-gradient(180deg, rgba(9, 12, 21, 0.45) 0%, rgba(9, 12, 21, 0.92) 100%),
     url('https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
 }
 
 .hero-content {
-  max-width: 850px;
+  max-width: 800px;
   z-index: 2;
+  text-align: left;
   animation: fadeIn 0.8s ease-out;
 }
 
 .hero-content h1 {
   font-size: 3.8rem;
   font-weight: 800;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   letter-spacing: -1px;
   background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  text-align: left;
 }
 
 .hero-content p {
   font-size: 1.2rem;
   color: var(--text-muted);
-  margin-bottom: 40px;
+  margin-bottom: 36px;
   max-width: 700px;
-  margin-left: auto;
+  margin-left: 0;
   margin-right: auto;
+  text-align: left;
 }
 
 .hero-buttons {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 20px;
   flex-wrap: wrap;
 }
