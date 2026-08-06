@@ -18,36 +18,67 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Setup DB Tables & Migrations
+// Setup DB Tables & Foreign Keys (tbl_users, tbl_vehicle_master, tbl_booking_details)
 db.serialize(() => {
+  db.run(`PRAGMA foreign_keys = ON;`);
+
+  // 1. tbl_users
   db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS tbl_users (
+      user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
-      mobile TEXT,
+      mobile_no TEXT NOT NULL,
       password TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      kyc_verification_type TEXT DEFAULT 'Driving License',
+      verification_details TEXT,
+      created_date DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.run(`ALTER TABLE users ADD COLUMN mobile TEXT`, () => {});
-
+  // 2. tbl_vehicle_master
   db.run(`
-    CREATE TABLE IF NOT EXISTS bookings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+    CREATE TABLE IF NOT EXISTS tbl_vehicle_master (
+      rent_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rental_duration TEXT UNIQUE NOT NULL,
+      scooters INTEGER NOT NULL,
+      bikes INTEGER NOT NULL,
+      sports_bike INTEGER NOT NULL,
+      royal_enfield INTEGER NOT NULL
+    )
+  `, () => {
+    // Seed rates from OGBikedb.xlsx if empty
+    db.get('SELECT COUNT(*) as count FROM tbl_vehicle_master', (err, row) => {
+      if (row && row.count === 0) {
+        const stmt = db.prepare(`
+          INSERT INTO tbl_vehicle_master (rent_id, rental_duration, scooters, bikes, sports_bike, royal_enfield)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(1, 'Daily', 499, 599, 999, 1199);
+        stmt.run(2, 'Weekly', 2800, 3500, 4500, 7000);
+        stmt.run(3, 'Monthly', 7500, 8000, 12000, 24000);
+        stmt.finalize();
+        console.log('Seeded tbl_vehicle_master rate tiers (Daily, Weekly, Monthly).');
+      }
+    });
+  });
+
+  // 3. tbl_booking_details with Foreign Keys
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tbl_booking_details (
+      trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
-      bike_type TEXT NOT NULL,
-      rental_days INTEGER NOT NULL,
-      total_price INTEGER NOT NULL,
-      status TEXT DEFAULT 'Confirmed',
+      rent_id INTEGER NOT NULL,
+      vehicle_type TEXT NOT NULL,
+      usage_days INTEGER NOT NULL,
+      total_cost INTEGER NOT NULL,
+      booking_status TEXT DEFAULT 'Confirmed',
       payment_status TEXT DEFAULT 'Pending',
       booking_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users (id)
+      FOREIGN KEY (user_id) REFERENCES tbl_users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (rent_id) REFERENCES tbl_vehicle_master(rent_id) ON DELETE CASCADE
     )
   `);
-
-  db.run(`ALTER TABLE bookings ADD COLUMN payment_status TEXT DEFAULT 'Pending'`, () => {});
 });
 
 // Middleware
@@ -92,6 +123,16 @@ app.get('/dashboard', (req, res) => {
 // API ROUTES
 // ==========================================
 
+// Vehicle Master - Get Rates
+app.get('/api/rates', (req, res) => {
+  db.all('SELECT * FROM tbl_vehicle_master ORDER BY rent_id ASC', (err, rows) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'Database error.' });
+    }
+    res.json({ success: true, rates: rows });
+  });
+});
+
 // Auth - Session Check
 app.get('/api/auth/session', (req, res) => {
   if (req.session && req.session.userId) {
@@ -108,7 +149,7 @@ app.get('/api/auth/session', (req, res) => {
 
 // Auth - Signup
 app.post('/api/auth/signup', (req, res) => {
-  const { name, email, mobile, password } = req.body;
+  const { name, email, mobile, password, kycType, verificationDetails } = req.body;
 
   if (!name || !email || !password || !mobile) {
     return res.status(400).json({ success: false, message: 'All fields including mobile number are required.' });
@@ -120,9 +161,11 @@ app.post('/api/auth/signup', (req, res) => {
 
   const normalizedEmail = email.toLowerCase().trim();
   const cleanMobile = mobile.trim();
+  const kyc = kycType || 'Driving License';
+  const vDetails = verificationDetails || '';
 
   // Check if user exists
-  db.get('SELECT id FROM users WHERE email = ?', [normalizedEmail], (err, row) => {
+  db.get('SELECT user_id FROM tbl_users WHERE email = ?', [normalizedEmail], (err, row) => {
     if (err) {
       console.error('Signup error:', err);
       return res.status(500).json({ success: false, message: 'Internal database error.' });
@@ -135,15 +178,22 @@ app.post('/api/auth/signup', (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     db.run(
-      'INSERT INTO users (name, email, mobile, password) VALUES (?, ?, ?, ?)',
-      [name.trim(), normalizedEmail, cleanMobile, hashedPassword],
+      'INSERT INTO tbl_users (user_name, email, mobile_no, password, kyc_verification_type, verification_details) VALUES (?, ?, ?, ?, ?, ?)',
+      [name.trim(), normalizedEmail, cleanMobile, hashedPassword, kyc, vDetails],
       function (insertErr) {
         if (insertErr) {
           console.error('Insert user error:', insertErr);
           return res.status(500).json({ success: false, message: 'Failed to register account.' });
         }
 
-        const newUser = { id: this.lastID, name: name.trim(), email: normalizedEmail, mobile: cleanMobile };
+        const newUser = {
+          id: this.lastID,
+          name: name.trim(),
+          email: normalizedEmail,
+          mobile: cleanMobile,
+          kycType: kyc,
+          verificationDetails: vDetails
+        };
         req.session.userId = newUser.id;
         req.session.user = newUser;
 
@@ -167,7 +217,7 @@ app.post('/api/auth/login', (req, res) => {
 
   const normalizedEmail = email.toLowerCase().trim();
 
-  db.get('SELECT * FROM users WHERE email = ?', [normalizedEmail], (err, user) => {
+  db.get('SELECT * FROM tbl_users WHERE email = ?', [normalizedEmail], (err, user) => {
     if (err) {
       console.error('Login error:', err);
       return res.status(500).json({ success: false, message: 'Internal database error.' });
@@ -177,8 +227,15 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    const sessionUser = { id: user.id, name: user.name, email: user.email, mobile: user.mobile || '+91 9840494166' };
-    req.session.userId = user.id;
+    const sessionUser = {
+      id: user.user_id,
+      name: user.user_name,
+      email: user.email,
+      mobile: user.mobile_no,
+      kycType: user.kyc_verification_type,
+      verificationDetails: user.verification_details
+    };
+    req.session.userId = user.user_id;
     req.session.user = sessionUser;
 
     return res.json({
@@ -207,7 +264,14 @@ app.get('/api/bookings', (req, res) => {
   }
 
   db.all(
-    'SELECT * FROM bookings WHERE user_id = ? ORDER BY id DESC',
+    `SELECT b.trip_id as id, b.trip_id, b.user_id, b.rent_id, b.vehicle_type, b.usage_days as rental_days, 
+            b.total_cost as total_price, b.booking_status as status, b.payment_status, b.booking_date,
+            u.user_name, u.email, u.mobile_no, v.rental_duration
+     FROM tbl_booking_details b
+     JOIN tbl_users u ON b.user_id = u.user_id
+     JOIN tbl_vehicle_master v ON b.rent_id = v.rent_id
+     WHERE b.user_id = ?
+     ORDER BY b.trip_id DESC`,
     [req.session.userId],
     (err, rows) => {
       if (err) {
@@ -235,42 +299,71 @@ app.post('/api/bookings', (req, res) => {
     return res.status(400).json({ success: false, message: 'Valid bike selection and rental duration required.' });
   }
 
-  const rates = {
-    'Scooter': 499,
-    'Sports Bike': 1499,
-    'Adventure Bike': 2499
-  };
-
-  const rate = rates[bikeType];
-  if (!rate) {
-    return res.status(400).json({ success: false, message: 'Invalid vehicle type selected.' });
+  // Determine rate tier from tbl_vehicle_master
+  let rentId = 1; // Default Daily
+  if (days >= 30) {
+    rentId = 3; // Monthly
+  } else if (days >= 7) {
+    rentId = 2; // Weekly
   }
 
-  const totalPrice = rate * days;
-
-  db.run(
-    'INSERT INTO bookings (user_id, bike_type, rental_days, total_price, status, payment_status) VALUES (?, ?, ?, ?, ?, ?)',
-    [req.session.userId, bikeType, days, totalPrice, 'Confirmed', 'Pending'],
-    function (err) {
-      if (err) {
-        console.error('Insert booking error:', err);
-        return res.status(500).json({ success: false, message: 'Failed to record booking.' });
-      }
-
-      return res.json({
-        success: true,
-        message: 'Ride booked successfully!',
-        booking: {
-          id: this.lastID,
-          bike_type: bikeType,
-          rental_days: days,
-          total_price: totalPrice,
-          status: 'Confirmed',
-          payment_status: 'Pending'
-        }
-      });
+  db.get('SELECT * FROM tbl_vehicle_master WHERE rent_id = ?', [rentId], (err, masterRow) => {
+    if (err || !masterRow) {
+      console.error('Vehicle master fetch error:', err);
+      return res.status(500).json({ success: false, message: 'Vehicle pricing error.' });
     }
-  );
+
+    // Vehicle column mapping
+    const vehicleKeyMap = {
+      'Scooters': 'scooters',
+      'Scooter': 'scooters',
+      'Bikes': 'bikes',
+      'Sports bike': 'sports_bike',
+      'Sports Bike': 'sports_bike',
+      'Royal Enfield': 'royal_enfield',
+      'Adventure Bike': 'royal_enfield'
+    };
+
+    const colName = vehicleKeyMap[bikeType] || 'scooters';
+    const unitPrice = masterRow[colName] || 499;
+
+    let totalPrice = 0;
+    if (rentId === 1) {
+      totalPrice = unitPrice * days;
+    } else if (rentId === 2) {
+      const weeks = Math.ceil(days / 7);
+      totalPrice = unitPrice * weeks;
+    } else {
+      const months = Math.ceil(days / 30);
+      totalPrice = unitPrice * months;
+    }
+
+    db.run(
+      'INSERT INTO tbl_booking_details (user_id, rent_id, vehicle_type, usage_days, total_cost, booking_status, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [req.session.userId, rentId, bikeType, days, totalPrice, 'Confirmed', 'Pending'],
+      function (insertErr) {
+        if (insertErr) {
+          console.error('Insert booking error:', insertErr);
+          return res.status(500).json({ success: false, message: 'Failed to record booking.' });
+        }
+
+        return res.json({
+          success: true,
+          message: 'Ride booked successfully!',
+          booking: {
+            id: this.lastID,
+            trip_id: this.lastID,
+            rent_id: rentId,
+            bike_type: bikeType,
+            rental_days: days,
+            total_price: totalPrice,
+            status: 'Confirmed',
+            payment_status: 'Pending'
+          }
+        });
+      }
+    );
+  });
 });
 
 // Bookings - Generate UPI QR Code & Simulate Email/SMS Notifications
@@ -279,11 +372,11 @@ app.post('/api/bookings/:id/pay', (req, res) => {
     return res.status(401).json({ success: false, message: 'Unauthorized. Please sign in.' });
   }
 
-  const bookingId = req.params.id;
+  const tripId = req.params.id;
 
   db.get(
-    'SELECT b.*, u.email, u.mobile, u.name FROM bookings b JOIN users u ON b.user_id = u.id WHERE b.id = ? AND b.user_id = ?',
-    [bookingId, req.session.userId],
+    `SELECT b.*, u.email, u.mobile_no, u.user_name FROM tbl_booking_details b JOIN tbl_users u ON b.user_id = u.user_id WHERE b.trip_id = ? AND b.user_id = ?`,
+    [tripId, req.session.userId],
     async (err, booking) => {
       if (err) {
         console.error('Fetch booking for payment error:', err);
@@ -294,21 +387,20 @@ app.post('/api/bookings/:id/pay', (req, res) => {
         return res.status(404).json({ success: false, message: 'Booking record not found.' });
       }
 
-      const upiString = `upi://pay?pa=ogbikerentals@upi&pn=OGBikeRentals&am=${booking.total_price}&cu=INR&tn=Booking_${booking.id}`;
+      const upiString = `upi://pay?pa=ogbikerentals@upi&pn=OGBikeRentals&am=${booking.total_cost}&cu=INR&tn=Trip_${booking.trip_id}`;
 
       try {
         const qrCodeUrl = await QRCode.toDataURL(upiString, { width: 300, margin: 2 });
         const userEmail = booking.email;
-        const userMobile = booking.mobile || '+91 9840494166';
-        const paymentLink = `http://localhost:${PORT}/dashboard?pay_id=${booking.id}`;
+        const userMobile = booking.mobile_no || '+91 9840494166';
+        const paymentLink = `http://localhost:${PORT}/dashboard?pay_id=${booking.trip_id}`;
 
-        // Console Log Simulated Email and SMS dispatch
         console.log(`\n================ SIMULATED NOTIFICATION DISPATCH ================`);
         console.log(`[EMAIL DISPATCH] To: ${userEmail}`);
-        console.log(`  Subject: Payment Request - OG Bike Rentals Booking #${booking.id}`);
-        console.log(`  Message: Dear ${booking.name}, please complete your payment of ₹${booking.total_price} for your ${booking.bike_type} rental via UPI: ${upiString} or Link: ${paymentLink}`);
+        console.log(`  Subject: Payment Request - OG Bike Rentals Trip #${booking.trip_id}`);
+        console.log(`  Message: Dear ${booking.user_name}, please complete your payment of ₹${booking.total_cost} for your ${booking.vehicle_type} rental via UPI: ${upiString} or Link: ${paymentLink}`);
         console.log(`[SMS DISPATCH] To: ${userMobile}`);
-        console.log(`  Message: OG Bikes: Pay ₹${booking.total_price} for Booking #${booking.id} using UPI QR or link: ${paymentLink}`);
+        console.log(`  Message: OG Bikes: Pay ₹${booking.total_cost} for Trip #${booking.trip_id} using UPI QR or link: ${paymentLink}`);
         console.log(`=================================================================\n`);
 
         return res.json({
@@ -318,7 +410,15 @@ app.post('/api/bookings/:id/pay', (req, res) => {
           paymentLink,
           emailSentTo: userEmail,
           smsSentTo: userMobile,
-          booking
+          booking: {
+            id: booking.trip_id,
+            trip_id: booking.trip_id,
+            total_price: booking.total_cost,
+            bike_type: booking.vehicle_type,
+            rental_days: booking.usage_days,
+            status: booking.booking_status,
+            payment_status: booking.payment_status
+          }
         });
       } catch (qrErr) {
         console.error('QR generation error:', qrErr);
@@ -334,11 +434,11 @@ app.post('/api/bookings/:id/confirm-payment', (req, res) => {
     return res.status(401).json({ success: false, message: 'Unauthorized. Please sign in.' });
   }
 
-  const bookingId = req.params.id;
+  const tripId = req.params.id;
 
   db.run(
-    "UPDATE bookings SET payment_status = 'Paid' WHERE id = ? AND user_id = ?",
-    [bookingId, req.session.userId],
+    "UPDATE tbl_booking_details SET payment_status = 'Paid' WHERE trip_id = ? AND user_id = ?",
+    [tripId, req.session.userId],
     function (err) {
       if (err) {
         console.error('Confirm payment error:', err);

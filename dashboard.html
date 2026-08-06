@@ -49,9 +49,10 @@
                 <div class="select-wrapper">
                   <select id="bike-type" class="form-input" required>
                     <option value="" disabled selected>-- Choose a vehicle --</option>
-                    <option value="Scooter">Scooter (₹499/day)</option>
-                    <option value="Sports Bike">Sports Bike (₹1,499/day)</option>
-                    <option value="Adventure Bike">Adventure Bike (₹2,499/day)</option>
+                    <option value="Scooters">Scooters (₹499/day)</option>
+                    <option value="Bikes">Bikes (₹599/day)</option>
+                    <option value="Sports bike">Sports bike (₹999/day)</option>
+                    <option value="Royal Enfield">Royal Enfield (₹1,199/day)</option>
                   </select>
                 </div>
               </div>
@@ -167,10 +168,10 @@
 
   <script src="/js/auth.js"></script>
   <script>
-    const rates = {
-      'Scooter': 499,
-      'Sports Bike': 1499,
-      'Adventure Bike': 2499
+    const vehicleMasterRates = {
+      'Daily': { 'Scooters': 499, 'Bikes': 599, 'Sports bike': 999, 'Royal Enfield': 1199 },
+      'Weekly': { 'Scooters': 2800, 'Bikes': 3500, 'Sports bike': 4500, 'Royal Enfield': 7000 },
+      'Monthly': { 'Scooters': 7500, 'Bikes': 8000, 'Sports bike': 12000, 'Royal Enfield': 24000 }
     };
 
     // Protect Dashboard: redirect if not logged in
@@ -231,8 +232,20 @@
         return;
       }
 
-      const rate = rates[bikeType] || 0;
-      const total = rate * days;
+      let total = 0;
+      if (days < 7) {
+        const rate = (vehicleMasterRates['Daily'] && vehicleMasterRates['Daily'][bikeType]) || 499;
+        total = rate * days;
+      } else if (days < 30) {
+        const rate = (vehicleMasterRates['Weekly'] && vehicleMasterRates['Weekly'][bikeType]) || 2800;
+        const weeks = Math.ceil(days / 7);
+        total = rate * weeks;
+      } else {
+        const rate = (vehicleMasterRates['Monthly'] && vehicleMasterRates['Monthly'][bikeType]) || 7500;
+        const months = Math.ceil(days / 30);
+        total = rate * months;
+      }
+
       document.getElementById('price-preview').innerText = `₹${total.toLocaleString('en-IN')}`;
     }
 
