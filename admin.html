@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - OG Bike Rentals</title>
+  <link rel="stylesheet" href="/css/global.css">
+</head>
+
+<body>
+
+  <!-- Sticky Glass Navbar -->
+  <nav>
+    <a href="/" class="logo">🏍 <span>OGBikeRentals Admin</span></a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="#users-section">Users Management</a></li>
+      <li><a href="#trips-section">Trip Approvals</a></li>
+      <li><button id="admin-logout-btn" class="nav-btn-secondary">Sign Out</button></li>
+    </ul>
+  </nav>
+
+  <!-- Admin Main Dashboard -->
+  <main class="dashboard-layout">
+    <div style="max-width: 1300px; margin: 0 auto; padding: 0 20px;">
+
+      <!-- Header Banner -->
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h1>Admin Control Panel</h1>
+          <p id="admin-info-display">Logged in as Administrator</p>
+        </div>
+        <div>
+          <span class="status-badge admin-pill">🔒 Private Admin Access</span>
+        </div>
+      </div>
+
+      <!-- Stats Overview Cards -->
+      <div class="card-grid" style="margin-bottom: 40px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div class="glass-card" style="padding: 24px;">
+          <span style="font-size: 2rem; display: block; margin-bottom: 8px;">👥</span>
+          <span style="color: var(--text-muted); font-size: 0.88rem;">Total Registered Users</span>
+          <h2 id="stat-total-users" style="font-size: 2.2rem; color: var(--text-main); margin-top: 4px;">0</h2>
+        </div>
+
+        <div class="glass-card" style="padding: 24px;">
+          <span style="font-size: 2rem; display: block; margin-bottom: 8px;">🏍</span>
+          <span style="color: var(--text-muted); font-size: 0.88rem;">Total Bookings</span>
+          <h2 id="stat-total-bookings" style="font-size: 2.2rem; color: var(--accent-cyan); margin-top: 4px;">0</h2>
+        </div>
+
+        <div class="glass-card" style="padding: 24px;">
+          <span style="font-size: 2rem; display: block; margin-bottom: 8px;">⏳</span>
+          <span style="color: var(--text-muted); font-size: 0.88rem;">Pending Approvals</span>
+          <h2 id="stat-pending-trips" style="font-size: 2.2rem; color: #f59e0b; margin-top: 4px;">0</h2>
+        </div>
+
+        <div class="glass-card" style="padding: 24px;">
+          <span style="font-size: 2rem; display: block; margin-bottom: 8px;">💰</span>
+          <span style="color: var(--text-muted); font-size: 0.88rem;">Total Revenue Generated</span>
+          <h2 id="stat-total-revenue" style="font-size: 2.2rem; color: var(--primary); margin-top: 4px;">₹0</h2>
+        </div>
+      </div>
+
+      <!-- Section 1: User Details & Management -->
+      <section id="users-section" style="padding: 0; max-width: 100%; margin-bottom: 50px;">
+        <div class="glass-card" style="padding: 30px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+            <div>
+              <h3 style="font-size: 1.4rem; color: var(--primary);">User Accounts Management</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">View user details, update profile info, or reset passwords</p>
+            </div>
+            <div style="width: 300px;">
+              <input type="text" id="user-search-input" class="form-input" placeholder="Search user by name, email or mobile..." style="padding: 10px 14px; font-size: 0.88rem;">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Name</th>
+                  <th>Email Address</th>
+                  <th>Mobile Number</th>
+                  <th>KYC Type</th>
+                  <th>Verification Details</th>
+                  <th>Role</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr>
+                  <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">Loading user accounts...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Trip Approvals & Booking Management -->
+      <section id="trips-section" style="padding: 0; max-width: 100%; margin-bottom: 50px;">
+        <div class="glass-card" style="padding: 30px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+            <div>
+              <h3 style="font-size: 1.4rem; color: var(--accent-cyan);">Trip Approvals & Bookings</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">Review trip bookings across all users and issue approvals</p>
+            </div>
+
+            <!-- Filter Status Buttons -->
+            <div class="filter-tabs" style="display: flex; gap: 8px;">
+              <button onclick="filterTrips('All')" class="filter-tab-btn active">All</button>
+              <button onclick="filterTrips('Pending Approval')" class="filter-tab-btn">Pending</button>
+              <button onclick="filterTrips('Approved')" class="filter-tab-btn">Approved</button>
+              <button onclick="filterTrips('Confirmed')" class="filter-tab-btn">Confirmed</button>
+              <button onclick="filterTrips('Rejected')" class="filter-tab-btn">Rejected</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Trip ID</th>
+                  <th>Rider Name & Contact</th>
+                  <th>Vehicle Type</th>
+                  <th>Usage Days</th>
+                  <th>Total Cost</th>
+                  <th>Booking Date</th>
+                  <th>Payment Status</th>
+                  <th>Trip Status</th>
+                  <th>Approval Action</th>
+                </tr>
+              </thead>
+              <tbody id="trips-table-body">
+                <tr>
+                  <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Loading bookings...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Edit User Modal -->
+  <div id="edit-user-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeEditUserModal()">&times;</button>
+      <h2 style="font-size: 1.5rem; margin-bottom: 6px; text-align: center;">Edit User Details</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; text-align: center; margin-bottom: 20px;">Update user profile attributes and authorization role</p>
+
+      <form id="edit-user-form">
+        <input type="hidden" id="edit-user-id">
+
+        <div class="form-group">
+          <label for="edit-name">Full Name</label>
+          <input type="text" id="edit-name" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-email">Email Address</label>
+          <input type="email" id="edit-email" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-mobile">Mobile Number</label>
+          <input type="tel" id="edit-mobile" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-kyc-type">KYC Type</label>
+          <div class="select-wrapper">
+            <select id="edit-kyc-type" class="form-input">
+              <option value="Driving License">Driving License</option>
+              <option value="Aadhaar Card">Aadhaar Card</option>
+              <option value="Passport">Passport</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-kyc-details">KYC Verification Details</label>
+          <input type="text" id="edit-kyc-details" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="edit-role">User Role</label>
+          <div class="select-wrapper">
+            <select id="edit-role" class="form-input">
+              <option value="user">User (Standard)</option>
+              <option value="admin">Admin (Full Access)</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-btn" style="margin-top: 10px;">Save Profile Updates</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Reset Password Modal -->
+  <div id="reset-password-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <button class="modal-close-btn" onclick="closeResetPasswordModal()">&times;</button>
+      <h2 style="font-size: 1.5rem; margin-bottom: 6px; text-align: center; color: #ef4444;">Reset User Password</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; text-align: center; margin-bottom: 20px;">Set a new security password for <strong id="reset-user-target">User</strong></p>
+
+      <form id="reset-password-form">
+        <input type="hidden" id="reset-user-id">
+
+        <div class="form-group">
+          <label for="reset-new-password">New Password</label>
+          <input type="password" id="reset-new-password" class="form-input" placeholder="Min 6 characters" required autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary auth-btn" style="margin-top: 10px; background: linear-gradient(135deg, #ef4444, #dc2626);">Confirm Password Reset</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer style="margin-top: 80px;">
+    <p>© 2026 OG Bike Rentals Admin Portal. Restricted Access.</p>
+  </footer>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    let allUsersCache = [];
+    let allBookingsCache = [];
+    let currentFilterStatus = 'All';
+
+    // Verify Admin Session on Page Load
+    document.addEventListener('DOMContentLoaded', async () => {
+      const authState = await checkAuthSession();
+      if (!authState.authenticated || authState.user.role !== 'admin') {
+        showNotification('Unauthorized access. Admin privileges required.', 'error');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1200);
+        return;
+      }
+
+      document.getElementById('admin-info-display').innerText = `Logged in as ${authState.user.name} (${authState.user.email})`;
+      document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
+
+      // Load Admin Data
+      loadAdminUsers();
+      loadAdminBookings();
+
+      // Search bar filter
+      document.getElementById('user-search-input').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        renderUsersTable(allUsersCache.filter(u => 
+          u.user_name.toLowerCase().includes(query) || 
+          u.email.toLowerCase().includes(query) || 
+          u.mobile_no.toLowerCase().includes(query)
+        ));
+      });
+    });
+
+    // Load Admin Users
+    async function loadAdminUsers() {
+      try {
+        const response = await fetch('/api/admin/users');
+        const data = await response.json();
+        if (response.ok && data.success) {
+          allUsersCache = data.users || [];
+          document.getElementById('stat-total-users').innerText = allUsersCache.length;
+          renderUsersTable(allUsersCache);
+        } else {
+          showNotification(data.message || 'Failed to load user list.', 'error');
+        }
+      } catch (err) {
+        console.error('Error loading users:', err);
+      }
+    }
+
+    // Render Users Table
+    function renderUsersTable(usersList) {
+      const tbody = document.getElementById('users-table-body');
+      tbody.innerHTML = '';
+
+      if (usersList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No user accounts found.</td></tr>`;
+        return;
+      }
+
+      usersList.forEach(user => {
+        const row = document.createElement('tr');
+        const roleBadge = user.role === 'admin' 
+          ? `<span class="status-badge admin-pill">Admin</span>` 
+          : `<span class="status-badge confirmed">User</span>`;
+
+        row.innerHTML = `
+          <td><strong>#${user.user_id}</strong></td>
+          <td>${user.user_name}</td>
+          <td>${user.email}</td>
+          <td>${user.mobile_no}</td>
+          <td>${user.kyc_verification_type || 'Driving License'}</td>
+          <td style="color: var(--text-muted); font-size: 0.85rem;">${user.verification_details || 'N/A'}</td>
+          <td>${roleBadge}</td>
+          <td>
+            <div style="display: flex; gap: 6px;">
+              <button onclick="openEditUserModal(${user.user_id})" class="nav-btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;">Edit</button>
+              <button onclick="openResetPasswordModal(${user.user_id}, '${user.user_name.replace(/'/g, "\\'")}')" class="nav-btn-secondary" style="padding: 4px 10px; font-size: 0.78rem; border-color: rgba(239,68,68,0.4); color: #ef4444;">Reset Pass</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Load Admin Bookings & Calculate Stats
+    async function loadAdminBookings() {
+      try {
+        const response = await fetch('/api/admin/bookings');
+        const data = await response.json();
+        if (response.ok && data.success) {
+          allBookingsCache = data.bookings || [];
+
+          // Compute stats
+          document.getElementById('stat-total-bookings').innerText = allBookingsCache.length;
+          
+          const pendingCount = allBookingsCache.filter(b => b.status === 'Pending Approval').length;
+          document.getElementById('stat-pending-trips').innerText = pendingCount;
+
+          const totalRev = allBookingsCache
+            .filter(b => b.payment_status === 'Paid')
+            .reduce((sum, b) => sum + parseInt(b.total_price || 0), 0);
+          document.getElementById('stat-total-revenue').innerText = `₹${totalRev.toLocaleString('en-IN')}`;
+
+          renderTripsTable(allBookingsCache);
+        } else {
+          showNotification(data.message || 'Failed to load bookings list.', 'error');
+        }
+      } catch (err) {
+        console.error('Error loading admin bookings:', err);
+      }
+    }
+
+    // Filter Trips Tab Handler
+    function filterTrips(status) {
+      currentFilterStatus = status;
+      document.querySelectorAll('.filter-tab-btn').forEach(btn => {
+        if (btn.innerText.toLowerCase() === status.toLowerCase() || (status === 'All' && btn.innerText === 'All')) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      if (status === 'All') {
+        renderTripsTable(allBookingsCache);
+      } else {
+        renderTripsTable(allBookingsCache.filter(b => b.status === status));
+      }
+    }
+
+    // Render Trips Table
+    function renderTripsTable(tripsList) {
+      const tbody = document.getElementById('trips-table-body');
+      tbody.innerHTML = '';
+
+      if (tripsList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">No bookings match the filter criteria.</td></tr>`;
+        return;
+      }
+
+      tripsList.forEach(trip => {
+        const row = document.createElement('tr');
+
+        const bookingDate = new Date(trip.booking_date).toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+
+        // Status Badge Classes
+        let statusBadge = '';
+        if (trip.status === 'Approved') {
+          statusBadge = `<span class="status-badge approved">✓ Approved</span>`;
+        } else if (trip.status === 'Rejected') {
+          statusBadge = `<span class="status-badge rejected">✕ Rejected</span>`;
+        } else if (trip.status === 'Pending Approval') {
+          statusBadge = `<span class="status-badge pending">⏳ Pending</span>`;
+        } else {
+          statusBadge = `<span class="status-badge confirmed">${trip.status}</span>`;
+        }
+
+        const isPaid = trip.payment_status === 'Paid';
+        const payBadge = isPaid
+          ? `<span class="status-badge paid-badge">✓ Paid</span>`
+          : `<span class="status-badge" style="background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);">Pending</span>`;
+
+        // Approval Actions
+        const actions = `
+          <div style="display: flex; gap: 6px;">
+            <button onclick="updateTripStatus(${trip.trip_id}, 'Approved')" class="pay-btn" style="background: #10b981; font-size: 0.76rem; padding: 4px 10px;">Approve</button>
+            <button onclick="updateTripStatus(${trip.trip_id}, 'Rejected')" class="nav-btn-secondary" style="font-size: 0.76rem; padding: 4px 10px; color: #ef4444; border-color: rgba(239,68,68,0.4);">Reject</button>
+          </div>
+        `;
+
+        row.innerHTML = `
+          <td><strong>#${trip.trip_id}</strong></td>
+          <td>
+            <strong>${trip.user_name}</strong>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">${trip.email} | ${trip.mobile_no}</div>
+          </td>
+          <td>${trip.vehicle_type}</td>
+          <td>${trip.rental_days} days (${trip.rental_duration || 'Daily'})</td>
+          <td><span style="color: var(--primary); font-weight: 700;">₹${parseInt(trip.total_price).toLocaleString('en-IN')}</span></td>
+          <td style="color: var(--text-muted); font-size: 0.85rem;">${bookingDate}</td>
+          <td>${payBadge}</td>
+          <td>${statusBadge}</td>
+          <td>${actions}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Update Trip Approval Status
+    async function updateTripStatus(tripId, newStatus) {
+      try {
+        const response = await fetch(`/api/admin/bookings/${tripId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showNotification(data.message || `Trip #${tripId} set to ${newStatus}!`, 'success');
+          loadAdminBookings();
+        } else {
+          showNotification(data.message || 'Failed to update trip status.', 'error');
+        }
+      } catch (err) {
+        console.error('Error updating trip status:', err);
+        showNotification('Error contacting admin server.', 'error');
+      }
+    }
+
+    // Edit User Modal Handlers
+    function openEditUserModal(userId) {
+      const user = allUsersCache.find(u => u.user_id === userId);
+      if (!user) return;
+
+      document.getElementById('edit-user-id').value = user.user_id;
+      document.getElementById('edit-name').value = user.user_name;
+      document.getElementById('edit-email').value = user.email;
+      document.getElementById('edit-mobile').value = user.mobile_no;
+      document.getElementById('edit-kyc-type').value = user.kyc_verification_type || 'Driving License';
+      document.getElementById('edit-kyc-details').value = user.verification_details || '';
+      document.getElementById('edit-role').value = user.role || 'user';
+
+      document.getElementById('edit-user-modal').style.display = 'flex';
+    }
+
+    function closeEditUserModal() {
+      document.getElementById('edit-user-modal').style.display = 'none';
+    }
+
+    document.getElementById('edit-user-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('edit-user-id').value;
+      const name = document.getElementById('edit-name').value;
+      const email = document.getElementById('edit-email').value;
+      const mobile = document.getElementById('edit-mobile').value;
+      const kycType = document.getElementById('edit-kyc-type').value;
+      const verificationDetails = document.getElementById('edit-kyc-details').value;
+      const role = document.getElementById('edit-role').value;
+
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, mobile, role, kycType, verificationDetails })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showNotification(data.message || 'User profile updated!', 'success');
+          closeEditUserModal();
+          loadAdminUsers();
+        } else {
+          showNotification(data.message || 'Update failed.', 'error');
+        }
+      } catch (err) {
+        console.error('Update user submit error:', err);
+        showNotification('An error occurred updating profile.', 'error');
+      }
+    });
+
+    // Reset Password Modal Handlers
+    function openResetPasswordModal(userId, userName) {
+      document.getElementById('reset-user-id').value = userId;
+      document.getElementById('reset-user-target').innerText = `${userName} (#${userId})`;
+      document.getElementById('reset-new-password').value = '';
+      document.getElementById('reset-password-modal').style.display = 'flex';
+    }
+
+    function closeResetPasswordModal() {
+      document.getElementById('reset-password-modal').style.display = 'none';
+    }
+
+    document.getElementById('reset-password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = document.getElementById('reset-user-id').value;
+      const newPassword = document.getElementById('reset-new-password').value;
+
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newPassword })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showNotification(data.message || 'Password reset successfully!', 'success');
+          closeResetPasswordModal();
+        } else {
+          showNotification(data.message || 'Password reset failed.', 'error');
+        }
+      } catch (err) {
+        console.error('Reset password submit error:', err);
+        showNotification('An error occurred during password reset.', 'error');
+      }
+    });
+  </script>
+</body>
+
+</html>

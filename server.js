@@ -30,11 +30,30 @@ db.serialize(() => {
       email TEXT UNIQUE NOT NULL,
       mobile_no TEXT NOT NULL,
       password TEXT NOT NULL,
+      role TEXT DEFAULT 'user',
       kyc_verification_type TEXT DEFAULT 'Driving License',
       verification_details TEXT,
       created_date DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  db.run(`ALTER TABLE tbl_users ADD COLUMN role TEXT DEFAULT 'user'`, () => {});
+
+  // Seed Default Admin User
+  const adminEmail = 'admin@ogbikes.com';
+  db.get('SELECT user_id FROM tbl_users WHERE email = ?', [adminEmail], (err, row) => {
+    if (!row) {
+      const adminHashed = bcrypt.hashSync('adminpassword123', 10);
+      db.run(
+        `INSERT INTO tbl_users (user_name, email, mobile_no, password, role, kyc_verification_type, verification_details)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ['Admin Manager', adminEmail, '+91 9840494166', adminHashed, 'admin', 'Driving License', 'DL-ADMIN-001'],
+        () => {
+          console.log('Seeded default Admin user (admin@ogbikes.com / adminpassword123).');
+        }
+      );
+    }
+  });
 
   // 2. tbl_vehicle_master
   db.run(`
@@ -95,6 +114,14 @@ app.use(session({
   }
 }));
 
+// Admin Authorization Guard Middleware
+function requireAdmin(req, res, next) {
+  if (!req.session || !req.session.userId || !req.session.user || req.session.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
+  }
+  next();
+}
+
 // Static files
 app.use('/css', express.static(path.join(__dirname, 'css')));
 app.use('/js', express.static(path.join(__dirname, 'js')));
@@ -117,6 +144,14 @@ app.get('/signup', (req, res) => {
 
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
+
+// Private Admin Dashboard Page Route
+app.get('/admin', (req, res) => {
+  if (!req.session || !req.session.userId || !req.session.user || req.session.user.role !== 'admin') {
+    return res.redirect('/login');
+  }
+  res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 // ==========================================
@@ -163,6 +198,7 @@ app.post('/api/auth/signup', (req, res) => {
   const cleanMobile = mobile.trim();
   const kyc = kycType || 'Driving License';
   const vDetails = verificationDetails || '';
+  const userRole = 'user';
 
   // Check if user exists
   db.get('SELECT user_id FROM tbl_users WHERE email = ?', [normalizedEmail], (err, row) => {
@@ -178,8 +214,8 @@ app.post('/api/auth/signup', (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     db.run(
-      'INSERT INTO tbl_users (user_name, email, mobile_no, password, kyc_verification_type, verification_details) VALUES (?, ?, ?, ?, ?, ?)',
-      [name.trim(), normalizedEmail, cleanMobile, hashedPassword, kyc, vDetails],
+      'INSERT INTO tbl_users (user_name, email, mobile_no, password, role, kyc_verification_type, verification_details) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name.trim(), normalizedEmail, cleanMobile, hashedPassword, userRole, kyc, vDetails],
       function (insertErr) {
         if (insertErr) {
           console.error('Insert user error:', insertErr);
@@ -191,6 +227,7 @@ app.post('/api/auth/signup', (req, res) => {
           name: name.trim(),
           email: normalizedEmail,
           mobile: cleanMobile,
+          role: userRole,
           kycType: kyc,
           verificationDetails: vDetails
         };
@@ -232,6 +269,7 @@ app.post('/api/auth/login', (req, res) => {
       name: user.user_name,
       email: user.email,
       mobile: user.mobile_no,
+      role: user.role || 'user',
       kycType: user.kyc_verification_type,
       verificationDetails: user.verification_details
     };
@@ -313,7 +351,6 @@ app.post('/api/bookings', (req, res) => {
       return res.status(500).json({ success: false, message: 'Vehicle pricing error.' });
     }
 
-    // Vehicle column mapping
     const vehicleKeyMap = {
       'Scooters': 'scooters',
       'Scooter': 'scooters',
@@ -340,7 +377,7 @@ app.post('/api/bookings', (req, res) => {
 
     db.run(
       'INSERT INTO tbl_booking_details (user_id, rent_id, vehicle_type, usage_days, total_cost, booking_status, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [req.session.userId, rentId, bikeType, days, totalPrice, 'Confirmed', 'Pending'],
+      [req.session.userId, rentId, bikeType, days, totalPrice, 'Pending Approval', 'Pending'],
       function (insertErr) {
         if (insertErr) {
           console.error('Insert booking error:', insertErr);
@@ -349,7 +386,7 @@ app.post('/api/bookings', (req, res) => {
 
         return res.json({
           success: true,
-          message: 'Ride booked successfully!',
+          message: 'Ride booking submitted! Waiting for Admin approval.',
           booking: {
             id: this.lastID,
             trip_id: this.lastID,
@@ -357,7 +394,7 @@ app.post('/api/bookings', (req, res) => {
             bike_type: bikeType,
             rental_days: days,
             total_price: totalPrice,
-            status: 'Confirmed',
+            status: 'Pending Approval',
             payment_status: 'Pending'
           }
         });
@@ -452,6 +489,121 @@ app.post('/api/bookings/:id/confirm-payment', (req, res) => {
       return res.json({
         success: true,
         message: 'Payment confirmed successfully!'
+      });
+    }
+  );
+});
+
+// ==========================================
+// ADMIN ENDPOINTS (Protected by requireAdmin)
+// ==========================================
+
+// Admin - Get All Users
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  db.all(
+    'SELECT user_id, user_name, email, mobile_no, role, kyc_verification_type, verification_details, created_date FROM tbl_users ORDER BY user_id DESC',
+    (err, rows) => {
+      if (err) {
+        console.error('Admin fetch users error:', err);
+        return res.status(500).json({ success: false, message: 'Database error fetching users.' });
+      }
+      res.json({ success: true, users: rows || [] });
+    }
+  );
+});
+
+// Admin - Update User Profile & Role
+app.post('/api/admin/users/:id/update', requireAdmin, (req, res) => {
+  const userId = req.params.id;
+  const { name, email, mobile, role, kycType, verificationDetails } = req.body;
+
+  if (!name || !email || !mobile) {
+    return res.status(400).json({ success: false, message: 'Name, email, and mobile are required.' });
+  }
+
+  db.run(
+    `UPDATE tbl_users 
+     SET user_name = ?, email = ?, mobile_no = ?, role = ?, kyc_verification_type = ?, verification_details = ? 
+     WHERE user_id = ?`,
+    [name.trim(), email.toLowerCase().trim(), mobile.trim(), role || 'user', kycType || 'Driving License', verificationDetails || '', userId],
+    function (err) {
+      if (err) {
+        console.error('Admin update user error:', err);
+        return res.status(500).json({ success: false, message: 'Failed to update user profile.' });
+      }
+      res.json({ success: true, message: `User #${userId} profile updated successfully!` });
+    }
+  );
+});
+
+// Admin - Reset User Password
+app.post('/api/admin/users/:id/reset-password', requireAdmin, (req, res) => {
+  const userId = req.params.id;
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters long.' });
+  }
+
+  const hashedPassword = bcrypt.hashSync(newPassword, 10);
+  db.run(
+    'UPDATE tbl_users SET password = ? WHERE user_id = ?',
+    [hashedPassword, userId],
+    function (err) {
+      if (err) {
+        console.error('Admin password reset error:', err);
+        return res.status(500).json({ success: false, message: 'Failed to reset user password.' });
+      }
+      res.json({ success: true, message: `Password for User #${userId} has been reset successfully!` });
+    }
+  );
+});
+
+// Admin - Get All Bookings Across All Users
+app.get('/api/admin/bookings', requireAdmin, (req, res) => {
+  db.all(
+    `SELECT b.trip_id as id, b.trip_id, b.user_id, b.rent_id, b.vehicle_type, b.usage_days as rental_days, 
+            b.total_cost as total_price, b.booking_status as status, b.payment_status, b.booking_date,
+            u.user_name, u.email, u.mobile_no, v.rental_duration
+     FROM tbl_booking_details b
+     JOIN tbl_users u ON b.user_id = u.user_id
+     JOIN tbl_vehicle_master v ON b.rent_id = v.rent_id
+     ORDER BY b.trip_id DESC`,
+    (err, rows) => {
+      if (err) {
+        console.error('Admin fetch bookings error:', err);
+        return res.status(500).json({ success: false, message: 'Database error fetching bookings.' });
+      }
+      res.json({ success: true, bookings: rows || [] });
+    }
+  );
+});
+
+// Admin - Update Trip Approval Status (Approve / Reject)
+app.post('/api/admin/bookings/:id/status', requireAdmin, (req, res) => {
+  const tripId = req.params.id;
+  const { status } = req.body;
+
+  if (!status || !['Approved', 'Rejected', 'Confirmed', 'Pending Approval'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Invalid trip status provided.' });
+  }
+
+  db.run(
+    'UPDATE tbl_booking_details SET booking_status = ? WHERE trip_id = ?',
+    [status, tripId],
+    function (err) {
+      if (err) {
+        console.error('Admin update trip status error:', err);
+        return res.status(500).json({ success: false, message: 'Failed to update trip approval status.' });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ success: false, message: 'Booking trip record not found.' });
+      }
+
+      return res.json({
+        success: true,
+        message: `Trip #${tripId} status successfully set to '${status}'!`
       });
     }
   );

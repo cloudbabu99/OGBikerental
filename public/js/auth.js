@@ -60,23 +60,38 @@ async function handleLogout() {
   }
 }
 
-// Automatically sync navbar auth links on index page
+// Automatically sync navbar auth links on index & dashboard pages
 async function syncNavbar() {
   const navLinks = document.querySelector('nav .nav-links');
-  if (navLinks && (window.location.pathname === '/' || window.location.pathname === '/index.html')) {
+  if (navLinks) {
     const session = await checkAuthSession();
-    
-    let authLi = document.getElementById('nav-auth-item');
-    if (!authLi) {
-      authLi = document.createElement('li');
-      authLi.id = 'nav-auth-item';
-      navLinks.appendChild(authLi);
+
+    // Check if Admin link already exists
+    let adminLi = document.getElementById('nav-admin-portal-item');
+    if (session.authenticated && session.user.role === 'admin') {
+      if (!adminLi) {
+        adminLi = document.createElement('li');
+        adminLi.id = 'nav-admin-portal-item';
+        adminLi.innerHTML = `<a href="/admin" class="nav-btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">Admin Portal</a>`;
+        navLinks.insertBefore(adminLi, navLinks.firstChild);
+      }
+    } else if (adminLi) {
+      adminLi.remove();
     }
 
-    if (session.authenticated) {
-      authLi.innerHTML = `<a href="/dashboard" class="nav-btn">Dashboard</a>`;
-    } else {
-      authLi.innerHTML = `<a href="/login" class="nav-btn">Sign In</a>`;
+    if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+      let authLi = document.getElementById('nav-auth-item');
+      if (!authLi) {
+        authLi = document.createElement('li');
+        authLi.id = 'nav-auth-item';
+        navLinks.appendChild(authLi);
+      }
+
+      if (session.authenticated) {
+        authLi.innerHTML = `<a href="/dashboard" class="nav-btn">Dashboard</a>`;
+      } else {
+        authLi.innerHTML = `<a href="/login" class="nav-btn">Sign In</a>`;
+      }
     }
   }
 }
