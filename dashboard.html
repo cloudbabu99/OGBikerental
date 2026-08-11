@@ -18,7 +18,8 @@
       <li><a href="#booking-section">Book Ride</a></li>
       <li><a href="#history-section">My Bookings</a></li>
       <li id="admin-menu-item" style="display: none;">
-        <button id="open-admin-btn" class="nav-btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">🔒 Admin Portal</button>
+        <button id="open-admin-btn" class="nav-btn-secondary"
+          style="border-color: var(--accent-cyan); color: var(--accent-cyan);">🔒 Admin Portal</button>
       </li>
     </ul>
   </nav>
@@ -74,7 +75,8 @@
               <!-- Price Preview Box -->
               <div class="price-preview-box">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                  <span class="preview-label">Duration: <strong id="days-calculated-text" style="color: var(--text-main);">1 day</strong></span>
+                  <span class="preview-label">Duration: <strong id="days-calculated-text"
+                      style="color: var(--text-main);">1 day</strong></span>
                   <div style="text-align: right;">
                     <span class="preview-label" style="font-size: 0.82rem; display: block;">Estimated Total:</span>
                     <span id="price-preview" class="preview-value" style="font-size: 1.4rem;">₹0</span>
@@ -84,7 +86,8 @@
 
               <button type="submit" class="btn btn-primary auth-btn" style="margin-top: 18px;">Register Booking</button>
 
-              <div style="margin-top: 16px; font-size: 0.84rem; color: var(--accent-cyan); text-align: center; background: rgba(0, 242, 254, 0.08); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(0, 242, 254, 0.2);">
+              <div
+                style="margin-top: 16px; font-size: 0.84rem; color: var(--accent-cyan); text-align: center; background: rgba(0, 242, 254, 0.08); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(0, 242, 254, 0.2);">
                 ℹ Please call us for assistance on before booking
               </div>
             </form>
@@ -202,11 +205,11 @@
 
       // Update user details
       document.getElementById('welcome-message').innerText = `Welcome, ${authState.user.name}!`;
-      
+
       const emailDisplay = document.getElementById('user-email-display');
       if (authState.user.role === 'admin') {
         emailDisplay.innerHTML = `${authState.user.email} <span class="status-badge admin-pill" style="margin-left: 8px;">Admin Account</span>`;
-        
+
         // Enable Admin Menu item ONLY for Admin login
         const adminMenuItem = document.getElementById('admin-menu-item');
         if (adminMenuItem) {
