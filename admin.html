@@ -121,8 +121,7 @@
             <!-- Filter Status Pill Tabs -->
             <div class="filter-tabs" style="display: flex; gap: 8px;">
               <button onclick="filterTrips('All')" class="filter-tab-btn active">All</button>
-              <button onclick="filterTrips('Pending Approval')" class="filter-tab-btn">Pending</button>
-              <button onclick="filterTrips('Approved')" class="filter-tab-btn">Approved</button>
+              <button onclick="filterTrips('Registered')" class="filter-tab-btn">Registered</button>
               <button onclick="filterTrips('Confirmed')" class="filter-tab-btn">Confirmed</button>
               <button onclick="filterTrips('Rejected')" class="filter-tab-btn">Rejected</button>
             </div>
@@ -336,7 +335,7 @@
           // Compute stats
           document.getElementById('stat-total-bookings').innerText = allBookingsCache.length;
           
-          const pendingCount = allBookingsCache.filter(b => b.status === 'Pending Approval').length;
+          const pendingCount = allBookingsCache.filter(b => b.status === 'Registered' || b.status === 'Pending Approval').length;
           document.getElementById('stat-pending-trips').innerText = pendingCount;
 
           const totalRev = allBookingsCache
@@ -392,14 +391,14 @@
 
         // Status Badge Classes
         let statusBadge = '';
-        if (trip.status === 'Approved') {
-          statusBadge = `<span class="status-badge approved">✓ Approved</span>`;
+        if (trip.status === 'Confirmed' || trip.status === 'Approved') {
+          statusBadge = `<span class="status-badge approved">✓ Confirmed</span>`;
         } else if (trip.status === 'Rejected') {
           statusBadge = `<span class="status-badge rejected">✕ Rejected</span>`;
-        } else if (trip.status === 'Pending Approval') {
-          statusBadge = `<span class="status-badge pending">⏳ Pending</span>`;
+        } else if (trip.status === 'Registered') {
+          statusBadge = `<span class="status-badge pending">⏳ Registered</span>`;
         } else {
-          statusBadge = `<span class="status-badge confirmed">${trip.status}</span>`;
+          statusBadge = `<span class="status-badge pending">${trip.status}</span>`;
         }
 
         const isPaid = trip.payment_status === 'Paid';
@@ -407,10 +406,10 @@
           ? `<span class="status-badge paid-badge">✓ Paid</span>`
           : `<span class="status-badge" style="background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3);">Pending</span>`;
 
-        // Approval Actions
+        // Approval Actions: Approve updates status to 'Confirmed'
         const actions = `
           <div style="display: flex; gap: 6px;">
-            <button onclick="updateTripStatus(${trip.trip_id}, 'Approved')" class="pay-btn" style="background: #10b981; font-size: 0.76rem; padding: 4px 10px;">Approve</button>
+            <button onclick="updateTripStatus(${trip.trip_id}, 'Confirmed')" class="pay-btn" style="background: #10b981; font-size: 0.76rem; padding: 4px 10px;">Approve</button>
             <button onclick="updateTripStatus(${trip.trip_id}, 'Rejected')" class="nav-btn-secondary" style="font-size: 0.76rem; padding: 4px 10px; color: #ef4444; border-color: rgba(239,68,68,0.4);">Reject</button>
           </div>
         `;

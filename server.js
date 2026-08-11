@@ -381,7 +381,7 @@ app.post('/api/bookings', (req, res) => {
 
     db.run(
       'INSERT INTO tbl_booking_details (user_id, rent_id, vehicle_type, usage_days, total_cost, booking_status, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [req.session.userId, rentId, bikeType, days, totalPrice, 'Pending Approval', 'Pending'],
+      [req.session.userId, rentId, bikeType, days, totalPrice, 'Registered', 'Pending'],
       function (insertErr) {
         if (insertErr) {
           console.error('Insert booking error:', insertErr);
@@ -390,7 +390,7 @@ app.post('/api/bookings', (req, res) => {
 
         return res.json({
           success: true,
-          message: 'Ride booking submitted! Waiting for Admin approval.',
+          message: 'Ride booking registered successfully! Status: Registered.',
           booking: {
             id: this.lastID,
             trip_id: this.lastID,
@@ -398,7 +398,7 @@ app.post('/api/bookings', (req, res) => {
             bike_type: bikeType,
             rental_days: days,
             total_price: totalPrice,
-            status: 'Pending Approval',
+            status: 'Registered',
             payment_status: 'Pending'
           }
         });
@@ -588,7 +588,7 @@ app.post('/api/admin/bookings/:id/status', requireAdmin, (req, res) => {
   const tripId = req.params.id;
   const { status } = req.body;
 
-  if (!status || !['Approved', 'Rejected', 'Confirmed', 'Pending Approval'].includes(status)) {
+  if (!status || !['Approved', 'Rejected', 'Confirmed', 'Registered', 'Pending Approval'].includes(status)) {
     return res.status(400).json({ success: false, message: 'Invalid trip status provided.' });
   }
 

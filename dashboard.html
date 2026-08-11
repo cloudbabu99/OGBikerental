@@ -60,18 +60,33 @@
                 </div>
               </div>
 
-              <div class="form-group">
-                <label for="rental-days">Rental Duration (Days)</label>
-                <input type="number" id="rental-days" class="form-input" min="1" max="90" value="1" required>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                  <label for="start-date">Pickup Date</label>
+                  <input type="date" id="start-date" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label for="end-date">Return Date</label>
+                  <input type="date" id="end-date" class="form-input" required>
+                </div>
               </div>
 
               <!-- Price Preview Box -->
               <div class="price-preview-box">
-                <span class="preview-label">Estimated Total Price:</span>
-                <span id="price-preview" class="preview-value">₹0</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                  <span class="preview-label">Duration: <strong id="days-calculated-text" style="color: var(--text-main);">1 day</strong></span>
+                  <div style="text-align: right;">
+                    <span class="preview-label" style="font-size: 0.82rem; display: block;">Estimated Total:</span>
+                    <span id="price-preview" class="preview-value" style="font-size: 1.4rem;">₹0</span>
+                  </div>
+                </div>
               </div>
 
-              <button type="submit" class="btn btn-primary auth-btn" style="margin-top: 24px;">Register Booking</button>
+              <button type="submit" class="btn btn-primary auth-btn" style="margin-top: 18px;">Register Booking</button>
+
+              <div style="margin-top: 16px; font-size: 0.84rem; color: var(--accent-cyan); text-align: center; background: rgba(0, 242, 254, 0.08); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(0, 242, 254, 0.2);">
+                ℹ Please call us for assistance on before booking
+              </div>
             </form>
           </div>
         </div>
@@ -235,10 +250,41 @@
       // Load user booking history
       loadBookingHistory();
 
+      // Initialize datepickers
+      initDatepickers();
+
       // Listen for form price calculator updates
       document.getElementById('bike-type').addEventListener('change', calculatePricePreview);
-      document.getElementById('rental-days').addEventListener('input', calculatePricePreview);
     });
+
+    // Datepicker Initialization
+    function initDatepickers() {
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrowDate = new Date();
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      const tomorrow = tomorrowDate.toISOString().split('T')[0];
+
+      const startDateEl = document.getElementById('start-date');
+      const endDateEl = document.getElementById('end-date');
+
+      if (startDateEl && endDateEl) {
+        startDateEl.min = today;
+        startDateEl.value = today;
+        endDateEl.min = today;
+        endDateEl.value = tomorrow;
+
+        startDateEl.addEventListener('change', () => {
+          endDateEl.min = startDateEl.value;
+          if (endDateEl.value < startDateEl.value) {
+            endDateEl.value = startDateEl.value;
+          }
+          calculatePricePreview();
+        });
+
+        endDateEl.addEventListener('change', calculatePricePreview);
+        calculatePricePreview();
+      }
+    }
 
     // Handle browser back button or page navigation away from dashboard
     window.addEventListener('popstate', async () => {
@@ -255,11 +301,25 @@
     // Price Preview Calculator
     function calculatePricePreview() {
       const bikeType = document.getElementById('bike-type').value;
-      const days = parseInt(document.getElementById('rental-days').value, 10);
+      const startDateVal = document.getElementById('start-date') ? document.getElementById('start-date').value : '';
+      const endDateVal = document.getElementById('end-date') ? document.getElementById('end-date').value : '';
 
-      if (!bikeType || isNaN(days) || days <= 0) {
+      if (!bikeType || !startDateVal || !endDateVal) {
         document.getElementById('price-preview').innerText = '₹0';
+        if (document.getElementById('days-calculated-text')) {
+          document.getElementById('days-calculated-text').innerText = '0 days';
+        }
         return;
+      }
+
+      const start = new Date(startDateVal);
+      const end = new Date(endDateVal);
+      const diffTime = end - start;
+      let days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (days <= 0) days = 1;
+
+      if (document.getElementById('days-calculated-text')) {
+        document.getElementById('days-calculated-text').innerText = `${days} day${days > 1 ? 's' : ''}`;
       }
 
       let total = 0;
@@ -309,13 +369,24 @@
               ? `<span class="status-badge paid-badge">✓ Paid</span>`
               : `<button onclick="openPaymentModal(${booking.id})" class="nav-btn pay-btn">Pay Now (UPI QR)</button>`;
 
+            let statusBadge = '';
+            if (booking.status === 'Confirmed' || booking.status === 'Approved') {
+              statusBadge = `<span class="status-badge approved">✓ Confirmed</span>`;
+            } else if (booking.status === 'Registered') {
+              statusBadge = `<span class="status-badge pending">⏳ Registered</span>`;
+            } else if (booking.status === 'Rejected') {
+              statusBadge = `<span class="status-badge rejected">✕ Rejected</span>`;
+            } else {
+              statusBadge = `<span class="status-badge pending">${booking.status}</span>`;
+            }
+
             row.innerHTML = `
               <td><strong>#${booking.id}</strong></td>
               <td>${booking.bike_type}</td>
               <td>${booking.rental_days} days</td>
               <td><span style="color: var(--primary); font-weight: 700;">₹${parseInt(booking.total_price).toLocaleString('en-IN')}</span></td>
               <td style="color: var(--text-muted); font-size: 0.85rem;">${bookingDate}</td>
-              <td><span class="status-badge confirmed">${booking.status}</span></td>
+              <td>${statusBadge}</td>
               <td>${actionBtn}</td>
             `;
             tbody.appendChild(row);
@@ -354,11 +425,11 @@
           showNotification(`Payment link sent to ${data.emailSentTo} & SMS to ${data.smsSentTo}!`, 'success');
           document.getElementById('payment-modal').style.display = 'flex';
         } else {
-          showNotification(data.message || 'Failed to generate payment QR code.', 'error');
+          showNotification(data.message || 'Failed to generate payment details.', 'error');
         }
       } catch (err) {
         console.error('Error opening payment modal:', err);
-        showNotification('Error initiating payment process.', 'error');
+        showNotification('Error contacting server.', 'error');
       }
     }
 
@@ -373,7 +444,7 @@
       }
     }
 
-    async function confirmPaymentAction() {
+    async function confirmModalPayment() {
       if (!currentPaymentBookingId) return;
 
       try {
@@ -398,12 +469,18 @@
       e.preventDefault();
 
       const bikeType = document.getElementById('bike-type').value;
-      const rentalDays = document.getElementById('rental-days').value;
+      const startDateVal = document.getElementById('start-date').value;
+      const endDateVal = document.getElementById('end-date').value;
 
-      if (!bikeType || !rentalDays) {
-        showNotification('Please select a bike and duration.', 'error');
+      if (!bikeType || !startDateVal || !endDateVal) {
+        showNotification('Please select vehicle and rental dates.', 'error');
         return;
       }
+
+      const start = new Date(startDateVal);
+      const end = new Date(endDateVal);
+      let days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      if (days <= 0) days = 1;
 
       try {
         const response = await fetch('/api/bookings', {
@@ -411,17 +488,17 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ bikeType, rentalDays })
+          body: JSON.stringify({ bikeType, rentalDays: days, startDate: startDateVal, endDate: endDateVal })
         });
 
         const data = await response.json();
 
         if (response.ok && data.success) {
-          showNotification(data.message || 'Ride booked successfully!', 'success');
+          showNotification(data.message || 'Ride booking registered!', 'success');
 
-          // Reset form
+          // Reset form & re-init datepickers
           document.getElementById('booking-form').reset();
-          document.getElementById('price-preview').innerText = '₹0';
+          initDatepickers();
 
           // Reload history
           loadBookingHistory();
