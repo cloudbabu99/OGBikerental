@@ -306,7 +306,7 @@ app.get('/api/bookings', (req, res) => {
   }
 
   db.all(
-    `SELECT b.trip_id as id, b.trip_id, b.user_id, b.rent_id, b.vehicle_type, b.usage_days as rental_days, 
+    `SELECT b.trip_id as id, b.trip_id, b.user_id, b.rent_id, b.vehicle_type, b.vehicle_type as bike_type, b.usage_days as rental_days, 
             b.total_cost as total_price, b.booking_status as status, b.payment_status, b.booking_date,
             u.user_name, u.email, u.mobile_no, v.rental_duration
      FROM tbl_booking_details b

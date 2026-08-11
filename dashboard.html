@@ -385,7 +385,7 @@
 
             row.innerHTML = `
               <td><strong>#${booking.id}</strong></td>
-              <td>${booking.bike_type}</td>
+              <td><strong>${booking.vehicle_type || booking.bike_type}</strong></td>
               <td>${booking.rental_days} days</td>
               <td><span style="color: var(--primary); font-weight: 700;">₹${parseInt(booking.total_price).toLocaleString('en-IN')}</span></td>
               <td style="color: var(--text-muted); font-size: 0.85rem;">${bookingDate}</td>
