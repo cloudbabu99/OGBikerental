@@ -96,7 +96,7 @@
 
         <!-- Right: Booking History -->
         <div id="history-section">
-          <div class="glass-card" style="padding: 30px; height: 100%; display: flex; flex-direction: column;">
+          <div id="history-card" class="glass-card" style="padding: 30px; transition: all 0.3s ease; display: flex; flex-direction: column;">
             <h3 style="font-size: 1.4rem; margin-bottom: 20px; color: var(--primary);">Your Booking History</h3>
 
             <div id="bookings-loading" style="text-align: center; padding: 40px 0; color: var(--text-muted);">
@@ -397,9 +397,20 @@
 
           emptyEl.style.display = 'none';
           tableEl.style.display = 'block';
+
+          // Auto-align history card padding box after loading records
+          const historyCard = document.getElementById('history-card');
+          if (historyCard) {
+            historyCard.style.padding = '24px 28px';
+            historyCard.style.height = 'auto';
+          }
         } else {
           tableEl.style.display = 'none';
           emptyEl.style.display = 'block';
+          const historyCard = document.getElementById('history-card');
+          if (historyCard) {
+            historyCard.style.padding = '30px';
+          }
         }
       } catch (error) {
         console.error('Error loading bookings:', error);

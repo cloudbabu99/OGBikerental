@@ -663,6 +663,7 @@ section {
   display: grid;
   grid-template-columns: 420px 1fr;
   gap: 32px;
+  align-items: start;
 }
 
 @media (max-width: 992px) {
