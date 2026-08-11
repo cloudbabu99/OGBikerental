@@ -17,6 +17,9 @@
       <li><a href="/">Home</a></li>
       <li><a href="#booking-section">Book Ride</a></li>
       <li><a href="#history-section">My Bookings</a></li>
+      <li id="admin-menu-item" style="display: none;">
+        <button id="open-admin-btn" class="nav-btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan);">🔒 Admin Portal</button>
+      </li>
     </ul>
   </nav>
 
@@ -184,7 +187,34 @@
 
       // Update user details
       document.getElementById('welcome-message').innerText = `Welcome, ${authState.user.name}!`;
-      document.getElementById('user-email-display').innerText = authState.user.email;
+      
+      const emailDisplay = document.getElementById('user-email-display');
+      if (authState.user.role === 'admin') {
+        emailDisplay.innerHTML = `${authState.user.email} <span class="status-badge admin-pill" style="margin-left: 8px;">Admin Account</span>`;
+        
+        // Enable Admin Menu item ONLY for Admin login
+        const adminMenuItem = document.getElementById('admin-menu-item');
+        if (adminMenuItem) {
+          adminMenuItem.style.display = 'inline-block';
+        }
+
+        const openAdminBtn = document.getElementById('open-admin-btn');
+        if (openAdminBtn) {
+          openAdminBtn.addEventListener('click', () => {
+            // Popup admin.html in a centered window or navigate
+            const width = 1300;
+            const height = 850;
+            const left = (window.screen.width - width) / 2;
+            const top = (window.screen.height - height) / 2;
+            const adminPopup = window.open('/admin', 'AdminPortalPopup', `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`);
+            if (!adminPopup || adminPopup.closed || typeof adminPopup.closed === 'undefined') {
+              window.location.href = '/admin';
+            }
+          });
+        }
+      } else {
+        emailDisplay.innerText = authState.user.email;
+      }
 
       // Handle custom logout button
       document.getElementById('dashboard-logout-btn').addEventListener('click', handleLogout);

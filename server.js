@@ -39,19 +39,23 @@ db.serialize(() => {
 
   db.run(`ALTER TABLE tbl_users ADD COLUMN role TEXT DEFAULT 'user'`, () => {});
 
-  // Seed Default Admin User
+  // Seed / Update Default Admin User
   const adminEmail = 'admin@ogbikes.com';
+  const adminHashed = bcrypt.hashSync('Adm2026', 10);
   db.get('SELECT user_id FROM tbl_users WHERE email = ?', [adminEmail], (err, row) => {
     if (!row) {
-      const adminHashed = bcrypt.hashSync('adminpassword123', 10);
       db.run(
         `INSERT INTO tbl_users (user_name, email, mobile_no, password, role, kyc_verification_type, verification_details)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         ['Admin Manager', adminEmail, '+91 9840494166', adminHashed, 'admin', 'Driving License', 'DL-ADMIN-001'],
         () => {
-          console.log('Seeded default Admin user (admin@ogbikes.com / adminpassword123).');
+          console.log('Seeded default Admin user (admin@ogbikes.com / Adm2026).');
         }
       );
+    } else {
+      db.run('UPDATE tbl_users SET password = ?, role = ? WHERE email = ?', [adminHashed, 'admin', adminEmail], () => {
+        console.log('Updated Admin user password to Adm2026.');
+      });
     }
   });
 
